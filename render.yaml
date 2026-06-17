@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: himawari-qr
+    runtime: static
+    buildCommand: ""
+    staticPublishPath: .
+    pullRequestPreviewsEnabled: false
