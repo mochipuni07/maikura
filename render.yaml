@@ -5,3 +5,12 @@ services:
     buildCommand: ""
     staticPublishPath: .
     pullRequestPreviewsEnabled: false
+
+  - type: web
+    name: himawari-qr-api
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    pullRequestPreviewsEnabled: false
