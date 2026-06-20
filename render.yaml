@@ -5,6 +5,10 @@ services:
     buildCommand: ""
     staticPublishPath: .
     pullRequestPreviewsEnabled: false
+    routes:
+      - type: rewrite
+        source: /api/contacts
+        destination: https://jsonblob.com/api/jsonBlob/019ee066-a9a8-76b6-9dde-1cf118a7220f
 
   - type: web
     name: himawari-qr-api
