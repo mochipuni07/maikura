@@ -1,8 +1,8 @@
 import { createServer } from 'node:http';
 
 const PORT = Number(process.env.PORT || 10000);
-const JSON_BLOB_URL = process.env.JSON_BLOB_URL
-  || 'https://jsonblob.com/api/jsonBlob/019ee066-a9a8-76b6-9dde-1cf118a7220f';
+const STORAGE_URL = process.env.STORAGE_URL
+  || 'https://api.npoint.io/feb52e70b8f2f877abed';
 const ALLOWED_PREFECTURES = new Set(['愛知', '三重', '岐阜']);
 
 function setCorsHeaders(response) {
@@ -42,7 +42,7 @@ function normalizeContacts(value) {
 }
 
 async function readStore() {
-  const response = await fetch(JSON_BLOB_URL, { cache: 'no-store' });
+  const response = await fetch(`${STORAGE_URL}?t=${Date.now()}`, { cache: 'no-store' });
   if (!response.ok) throw new Error(`storage read failed: ${response.status}`);
   const data = await response.json();
   return {
@@ -58,8 +58,8 @@ async function writeStore(contacts) {
     revision: current.revision + 1,
     updatedAt: new Date().toISOString(),
   };
-  const response = await fetch(JSON_BLOB_URL, {
-    method: 'PUT',
+  const response = await fetch(`${STORAGE_URL}?t=${Date.now()}`, {
+    method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
