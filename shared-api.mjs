@@ -3,6 +3,12 @@ import { createServer } from 'node:http';
 const PORT = Number(process.env.PORT || 10000);
 const STORAGE_URL = process.env.STORAGE_URL
   || 'https://api.npoint.io/feb52e70b8f2f877abed';
+const APP_BUNDLE_URL = 'https://files.catbox.moe/qpbe65.html';
+const PUBLIC_FILES = {
+  '/sw.js': 'https://raw.githubusercontent.com/mochipuni07/maikura/main/sw.js',
+  '/manifest.webmanifest': 'https://raw.githubusercontent.com/mochipuni07/maikura/main/manifest.webmanifest',
+  '/himawari-icon.svg': 'https://raw.githubusercontent.com/mochipuni07/maikura/main/himawari-icon.svg',
+};
 const ALLOWED_PREFECTURES = new Set(['愛知', '三重', '岐阜']);
 
 function setCorsHeaders(response) {
@@ -16,6 +22,14 @@ function sendJson(response, status, value) {
   setCorsHeaders(response);
   response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
   response.end(JSON.stringify(value));
+}
+
+async function proxyPublicFile(response, sourceUrl, contentType) {
+  const upstream = await fetch(`${sourceUrl}?t=${Date.now()}`, { cache: 'no-store' });
+  if (!upstream.ok) throw new Error(`public file fetch failed: ${upstream.status}`);
+  setCorsHeaders(response);
+  response.writeHead(200, { 'Content-Type': contentType });
+  response.end(await upstream.text());
 }
 
 function normalizeContacts(value) {
@@ -78,6 +92,7 @@ async function readBody(request) {
 
 const server = createServer(async (request, response) => {
   setCorsHeaders(response);
+  const requestUrl = new URL(request.url, 'http://localhost');
 
   if (request.method === 'OPTIONS') {
     response.writeHead(204);
@@ -85,12 +100,37 @@ const server = createServer(async (request, response) => {
     return;
   }
 
-  if (request.url === '/health') {
+  if (requestUrl.pathname === '/health') {
     sendJson(response, 200, { ok: true });
     return;
   }
 
-  if (request.url !== '/api/contacts') {
+  if (request.method === 'GET' && ['/', '/index.html'].includes(requestUrl.pathname)) {
+    try {
+      await proxyPublicFile(response, APP_BUNDLE_URL, 'text/html; charset=utf-8');
+    } catch (error) {
+      console.error(error);
+      sendJson(response, 502, { error: 'app unavailable' });
+    }
+    return;
+  }
+
+  if (request.method === 'GET' && PUBLIC_FILES[requestUrl.pathname]) {
+    const contentType = requestUrl.pathname.endsWith('.svg')
+      ? 'image/svg+xml'
+      : requestUrl.pathname.endsWith('.js')
+        ? 'text/javascript; charset=utf-8'
+        : 'application/manifest+json; charset=utf-8';
+    try {
+      await proxyPublicFile(response, PUBLIC_FILES[requestUrl.pathname], contentType);
+    } catch (error) {
+      console.error(error);
+      sendJson(response, 502, { error: 'public file unavailable' });
+    }
+    return;
+  }
+
+  if (requestUrl.pathname !== '/api/contacts') {
     sendJson(response, 404, { error: 'not found' });
     return;
   }
